@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>paint</title>
+  <meta name="author" content="forresto" />
+  <meta name="description" content="canvas pixel paint" />
+  
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  <!-- Thanks https://github.com/eligrey/color.js -->
+  <script src="color.min.js"></script>
+  <script src="http://meemoo.org/meemoo/meemoo.js"></script>
+  
+  <style type="text/css">
+    html, body {
+      margin:0;
+      padding:0;
+    }
+    /*#background {
+          clear: both;
+        }*/
+    #paint {
+      /*position: absolute;
+      top: 0px;
+      left: 0px;*/
+      border: 1px dotted #eee;
+    }
+    #colors {
+      margin-top: 5px;
+      border: 1px solid #FFF;
+      border-width: 1px 0 0 1px;
+    }
+    #colors, #selectedColor, #baseColors, #lightnessColors, #alphaColors {
+      font-size: 10px;
+      line-height: 10px;
+      margin: 0;
+      padding: 0;
+    }
+    #selectedColor {
+      background-image: url(alphabg.png);
+      float: left;
+    }
+    button#selected {
+      width: 60px;
+      height: 60px;
+      border: 1px solid #FFF;
+      border-width: 0 1px 1px 0;
+    }
+    .color {
+      font-size: 10px;
+      line-height: 10px;
+      margin: 0;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+      border: 1px solid #FFF;
+      border-width: 0 1px 1px 0;
+    }
+    #alphaColors, #usedColors{
+      display: inline-block;
+      background-image: url(alphabg.png);
+    }
+  </style>
+</head>
+<body>
+  
+  <div>
+    <!-- <canvas id="background" width="320" height="240"></canvas> -->
+    <canvas id="paint" width="320" height="240"></canvas>
+  </div>
+  <div id="colors">
+    <div id="selectedColor"><button id="selected" /></div>
+    <div>
+      <div id="baseColors"></div>
+      <div id="lightnessColors"></div>
+      <div id="alphaColors"></div>
+      <div id="usedColors"></div>
+    </div>
+  </div>
+  <div id="control">
+    <!-- <button id="undo"></button> -->
+    <button id="send" onclick="Meemoo.inputs.send();">Send</button>
+  </div>
+  
+  <script type="text/javascript">
+  $(function(){
+    var c = document.getElementById("paint");
+    var cContext = c.getContext("2d");
+    
+    var w = c.width;
+    var h = c.height;
+    
+    //
+    // Colors
+    //
+    
+    // Thanks http://www.madebypi.co.uk/labs/colorutils/examples.html red.equal(10, true);
+    var baseColors = ["#FF0000", "#BE6C00", "#5B8E00", "#009C00", "#00A189", "#00A1F3", "#0097FF", "#0073FF", "#DF05E1", "#FF0078", "#FFFFFF", "#000000"];
+    
+    var selectedColor = baseColors[0];
+    var alpha = 1;
+    
+    var usedColors = [];
+    
+    function selectColor(color) {
+      // selectedColor = color;
+      selectedColor = Color(Color.parse(color).hexTriplet(), alpha).rgba();
+      console.log(selectedColor);
+      $("#selected").css({
+        "background-color": selectedColor
+      });
+      
+      cContext.strokeStyle = selectedColor;
+      // cContext.fillStyle = selectedColor;
+      cContext.lineWidth = 1;
+    }
+    
+    for (var i = 0; i < baseColors.length; i++) {
+      var color = baseColors[i];
+      var pick = $("<button />").attr({
+        "id": "color_"+i,
+        "class": "color"
+      }).css({
+        "background-color": color
+      }).click(function(){
+        selectColor( $(this).css("background-color") );
+        makeLightnessOptions();
+        makeAlphaOptions();
+      })
+      $("#baseColors").append(pick);
+    }
+    // Select the first
+    $("#color_0").click();
+    
+    function makeLightnessOptions (baseColor) {
+      if (!baseColor) {
+        baseColor = selectedColor;
+      }
+      $("#lightnessColors").empty();
+      var c = Color.parse(baseColor);
+      var hsl = c.hslData();
+      for (var i = 0; i < baseColors.length; i++) {
+        var l = 1 - i/(baseColors.length+2) - 1/(baseColors.length+2);
+        var color = Color.hsl(hsl[0], hsl[1], l ).hexTriplet();
+        var pick = $("<button />").attr({
+          "id": "color_l_"+i,
+          "class": "color"
+        }).css({
+          "background-color": color
+        }).click(function(){
+          selectColor( $(this).css("background-color") );
+          makeAlphaOptions();
+        })
+        $("#lightnessColors").append(pick);
+      }
+    }
+    
+    function makeAlphaOptions (baseColor) {
+      if (!baseColor) {
+        baseColor = selectedColor;
+      }
+      $("#alphaColors").empty();
+      for (var i = 0; i < baseColors.length; i++) {
+        var a = i/(baseColors.length+1) + 1/(baseColors.length+1);
+        var color = Color(Color.parse(baseColor).hexTriplet(), a).rgba();
+        // color = color.rgba();
+        var pick = $("<button />").attr({
+          "id": "color_l_"+i,
+          "class": "color"
+        }).css({
+          "background-color": color
+        }).data({
+          "alpha": a
+        }).click(function(){
+          alpha = $(this).data("alpha");
+          selectColor( $(this).css("background-color") );
+        })
+        $("#alphaColors").append(pick);
+      }
+    }
+    
+    // 
+    // Painting
+    //
+    
+    // Thanks http://thecommodoreamiga.com/2011/02/deluxe-paint/
+    
+    function tool_pencil() {
+      var tool = this;
+      this.started = false;
+      var lastX, lastY;
+
+      // This is called when you start holding down the mouse button.
+      // This starts the pencil drawing.
+      this.mousedown = function (e) {
+        tool.started = true;
+      };
+
+      // This function is called every time you move the mouse. Obviously, it only 
+      // draws if the tool.started state is set to true (when you are holding down 
+      // the mouse button).
+      this.mousemove = function (e) {
+        if (tool.started) {
+          if (lastX==undefined) {
+            lastX = e.clientX;
+            lastY = e.clientY;
+          }
+          
+          cContext.beginPath();
+          cContext.moveTo(lastX, lastY);
+          cContext.lineTo(e.clientX, e.clientY);
+          cContext.stroke();
+          
+          lastX = e.clientX;
+          lastY = e.clientY;
+        }
+      };
+
+      // This is called when you release the mouse button.
+      this.mouseup = function (e) {
+        if (tool.started) {
+          tool.mousemove(e);
+          tool.started = false;
+          lastX = undefined;
+          lastY = undefined;
+        }
+      };
+    }
+    
+    // Only pencil so far
+    var tool = new tool_pencil();
+    
+    // Attach the canvas listeners.
+    $(c).mousedown( function(e){
+      tool.mousedown(e);
+    }).mousemove( function(e){
+      tool.mousemove(e);
+    }).mouseup( function(e){
+      tool.mouseup(e);
+    });
+    
+    // Mouseup outside of canvas ends line
+    $("body").mouseup( function(e){
+      tool.mouseup(e);
+    });
+    
+    // 
+    // Meemoo connectors
+    //
+    
+    Meemoo.addInputs({
+      image: {
+        action: function (image) {
+          w = image.width;
+          h = image.height;
+          c.width = w;
+          c.height = h;
+          cContext.putImageData(image,0,0);
+        },
+        port: true,
+        type: "image"
+      },
+      send: {
+        action: function () {
+          Meemoo.send("image", cContext.getImageData( 0, 0, w, h ));
+        }
+      }
+    }).addOutputs({
+      image: {
+        port: true,
+        type: "image"
+      }
+    });
+    
+    
+  });
+  </script>
+  
+</body>
+</html>
