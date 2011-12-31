@@ -103,7 +103,9 @@
     var usedColors = [];
     
     function selectColor(color) {
-      // selectedColor = color;
+      if (!color) {
+        color = selectedColor;
+      }
       selectedColor = Color(Color.parse(color).hexTriplet(), alpha).rgba();
       console.log(selectedColor);
       $("#selected").css({
@@ -256,6 +258,9 @@
           c.width = w;
           c.height = h;
           cContext.putImageData(image,0,0);
+          
+          // Set paint color to previous
+          cContext.strokeStyle = selectedColor;
         },
         port: true,
         type: "image"
