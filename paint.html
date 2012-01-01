@@ -109,7 +109,6 @@
         color = selectedColor;
       }
       selectedColor = Color(Color.parse(color).hexTriplet(), alpha).rgba();
-      console.log(selectedColor);
       $("#selected").css({
         "background-color": selectedColor
       });
@@ -264,7 +263,6 @@
           // Set paint color to previous
           cContext.strokeStyle = selectedColor;
         },
-        port: true,
         type: "image"
       },
       send: {
@@ -274,7 +272,6 @@
       }
     }).addOutputs({
       image: {
-        port: true,
         type: "image"
       }
     });
