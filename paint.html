@@ -81,6 +81,7 @@
   </div>
   <div id="control">
     <!-- <button id="undo"></button> -->
+    <button id="clear" onclick="Meemoo.inputs.clear();">Clear</button>
     <button id="send" onclick="Meemoo.inputs.send();">Send</button>
   </div>
   
@@ -265,10 +266,17 @@
         },
         type: "image"
       },
+      clear: {
+        action: function () {
+          cContext.clearRect( 0, 0, c.width, c.height );
+        },
+        type: "bang"
+      },
       send: {
         action: function () {
           Meemoo.send("image", cContext.getImageData( 0, 0, w, h ));
-        }
+        },
+        type: "bang"
       }
     }).addOutputs({
       image: {
