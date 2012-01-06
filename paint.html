@@ -80,7 +80,7 @@
     </div>
   </div>
   <div id="control">
-    <!-- <button id="undo"></button> -->
+    <button id="undo" onclick="Meemoo.inputs.undo();">Undo</button>
     <button id="clear" onclick="Meemoo.inputs.clear();">Clear</button>
     <button id="send" onclick="Meemoo.inputs.send();">Send</button>
   </div>
@@ -90,8 +90,24 @@
     var c = document.getElementById("paint");
     var cContext = c.getContext("2d");
     
+    var lineWidth = 2;
+    cContext.lineWidth = lineWidth;
+    
     var w = c.width;
     var h = c.height;
+    
+    var undoLevels = [];
+    var undoLevelsMax = 20;
+    
+    function undo() {
+      if (undoLevels.length > 1) {
+        undoLevels.pop();
+        cContext.putImageData(undoLevels[undoLevels.length-1], 0, 0);
+      } 
+      if (undoLevels.length <= 1) {
+        $("#undo").attr("disabled", "disabled");
+      }
+    }
     
     //
     // Colors
@@ -115,8 +131,6 @@
       });
       
       cContext.strokeStyle = selectedColor;
-      // cContext.fillStyle = selectedColor;
-      cContext.lineWidth = 1;
     }
     
     for (var i = 0; i < baseColors.length; i++) {
@@ -223,6 +237,13 @@
       // This is called when you release the mouse button.
       this.mouseup = function (e) {
         if (tool.started) {
+          // Save undo
+          if(undoLevels.length >= undoLevelsMax){
+            undoLevels.shift()
+          }
+          undoLevels.push(cContext.getImageData( 0, 0, w, h ));
+          $("#undo").removeAttr("disabled");
+          // Finish stroke
           tool.mousemove(e);
           tool.started = false;
           lastX = undefined;
@@ -243,7 +264,7 @@
       tool.mouseup(e);
     });
     
-    // Mouseup outside of canvas ends line
+    // Mouseup outside of canvas also ends line
     $("body").mouseup( function(e){
       tool.mouseup(e);
     });
@@ -263,12 +284,27 @@
           
           // Set paint color to previous
           cContext.strokeStyle = selectedColor;
+          cContext.lineWidth = lineWidth;
+          
+          // Undo reset
+          undoLevels = [];
+          undoLevels.push(image);
+          $("#undo").attr("disabled", "disabled");
         },
         type: "image"
+      },
+      undo: {
+        action: undo,
+        type: "bang"
       },
       clear: {
         action: function () {
           cContext.clearRect( 0, 0, c.width, c.height );
+          
+          // Undo reset
+          undoLevels = [];
+          undoLevels.push( cContext.getImageData( 0, 0, w, h ) );
+          $("#undo").attr("disabled", "disabled");
         },
         type: "bang"
       },
@@ -283,6 +319,10 @@
         type: "image"
       }
     });
+    
+    
+    // Blank canvas in undo queue
+    Meemoo.inputs.clear();
     
     
   });
