@@ -18,13 +18,14 @@
       width: 100%;
       height: 100%;
     }
-    /*#background {
-          clear: both;
-        }*/
+    #onionskin {
+      z-index: 0;
+    }
     #paint {
-      /*position: absolute;
+      z-index: 1;
+      position: absolute;
       top: 0px;
-      left: 0px;*/
+      left: 0px;
       border: 1px dotted #eee;
     }
     #colors {
@@ -67,7 +68,7 @@
 <body>
   
   <div>
-    <!-- <canvas id="background" width="320" height="240"></canvas> -->
+    <canvas id="onionskin" width="320" height="240"></canvas>
     <canvas id="paint" width="320" height="240"></canvas>
   </div>
   <div id="colors">
@@ -89,6 +90,9 @@
   $(function(){
     var c = document.getElementById("paint");
     var cContext = c.getContext("2d");
+
+    var osCanvas = document.getElementById("onionskin");
+    var osContext = osCanvas.getContext("2d");
     
     var lineWidth = 2;
     cContext.lineWidth = lineWidth;
@@ -269,6 +273,27 @@
       tool.mouseup(e);
     });
     
+    //
+    // Onionskin (tracing image)
+    //
+    
+    var osActive = false;
+    
+    $("#paint").mouseover( function (e) {
+      if (osActive) {
+        $(this).css({
+          backgroundColor: "rgba(255,255,255,.5)"
+        })
+      }
+    }).mouseout( function (e) {
+      if (osActive) {
+        $(this).css({
+          backgroundColor: "#FFF"
+        })
+      }
+    });
+
+    
     // 
     // Meemoo connectors
     //
@@ -287,11 +312,30 @@
           cContext.lineWidth = lineWidth;
           
           // Undo reset
-          undoLevels = [];
+          //undoLevels = [];
           undoLevels.push(image);
-          $("#undo").attr("disabled", "disabled");
+          $("#undo").removeAttr("disabled");
+          //$("#undo").attr("disabled", "disabled");
         },
-        type: "image"
+        type: "image",
+        description: "background image, part of output"
+      },
+      tracing: {
+        action: function (image) {
+          osActive = true;
+          w = image.width;
+          h = image.height;
+          osCanvas.width = w;
+          osCanvas.height = h;
+          // Resize painting canvas if onionskin is different
+          if (c.width != w || c.height != h) {
+            c.width = w;
+            c.height = h;
+          }
+          osContext.putImageData(image, 0, 0);
+        },
+        type: "image",
+        description: "tracing image, not part of output"
       },
       undo: {
         action: undo,
@@ -302,9 +346,10 @@
           cContext.clearRect( 0, 0, c.width, c.height );
           
           // Undo reset
-          undoLevels = [];
+          //undoLevels = [];
           undoLevels.push( cContext.getImageData( 0, 0, w, h ) );
-          $("#undo").attr("disabled", "disabled");
+          $("#undo").removeAttr("disabled");
+          //$("#undo").attr("disabled", "disabled");
         },
         type: "bang"
       },
