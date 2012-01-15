@@ -283,13 +283,13 @@
       if (osActive) {
         $(this).css({
           backgroundColor: "rgba(255,255,255,.5)"
-        })
+        });
       }
     }).mouseout( function (e) {
       if (osActive) {
         $(this).css({
           backgroundColor: "#FFF"
-        })
+        });
       }
     });
 
@@ -333,6 +333,11 @@
             c.height = h;
           }
           osContext.putImageData(image, 0, 0);
+          // Matte it
+          $("#paint").css({
+            backgroundColor: "#FFF"
+          });
+
         },
         type: "image",
         description: "tracing image, not part of output"
