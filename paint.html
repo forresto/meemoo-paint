@@ -227,17 +227,17 @@
       this.mousemove = function (e) {
         if (tool.started) {
           if (lastX==undefined) {
-            lastX = e.clientX;
-            lastY = e.clientY;
+            lastX = e.pageX;
+            lastY = e.pageY;
           }
           
           cContext.beginPath();
           cContext.moveTo(lastX, lastY);
-          cContext.lineTo(e.clientX, e.clientY);
+          cContext.lineTo(e.pageX, e.pageY);
           cContext.stroke();
           
-          lastX = e.clientX;
-          lastY = e.clientY;
+          lastX = e.pageX;
+          lastY = e.pageY;
         }
       };
 
@@ -295,6 +295,19 @@
         });
       }
     });
+    
+    function resize (_w, _h) {
+      w = _w;
+      h = _h;
+      c.width = w;
+      c.height = h;
+      osCanvas.width = w;
+      osCanvas.height = h;
+      
+      // Set paint color to previous
+      cContext.strokeStyle = selectedColor;
+      cContext.lineWidth = lineWidth;
+    }
 
     
     // 
@@ -304,15 +317,12 @@
     Meemoo.addInputs({
       image: {
         action: function (image) {
-          w = image.width;
-          h = image.height;
-          c.width = w;
-          c.height = h;
-          cContext.putImageData(image,0,0);
+        
+          if (image.width != w || image.height != h) {
+            resize(image.width, image.height);
+          }
           
-          // Set paint color to previous
-          cContext.strokeStyle = selectedColor;
-          cContext.lineWidth = lineWidth;
+          cContext.putImageData(image,0,0);
           
           // Undo reset
           //undoLevels = [];
@@ -326,15 +336,10 @@
       tracing: {
         action: function (image) {
           osActive = true;
-          w = image.width;
-          h = image.height;
-          osCanvas.width = w;
-          osCanvas.height = h;
-          // Resize painting canvas if onionskin is different
-          if (c.width != w || c.height != h) {
-            c.width = w;
-            c.height = h;
+          if (image.width != w || image.height != h) {
+            resize(image.width, image.height);
           }
+          
           osContext.putImageData(image, 0, 0);
           // Matte it
           $("#paint").css({
