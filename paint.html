@@ -151,7 +151,7 @@
         selectColor( $(this).css("background-color") );
         makeLightnessOptions();
         makeAlphaOptions();
-      })
+      });
       $("#baseColors").append(pick);
     }
     // Select the first
@@ -175,7 +175,7 @@
         }).click(function(){
           selectColor( $(this).css("background-color") );
           makeAlphaOptions();
-        })
+        });
         $("#lightnessColors").append(pick);
       }
     }
@@ -199,7 +199,7 @@
         }).click(function(){
           alpha = $(this).data("alpha");
           selectColor( $(this).css("background-color") );
-        })
+        });
         $("#alphaColors").append(pick);
       }
     }
@@ -246,7 +246,7 @@
         if (tool.started) {
           // Save undo
           if(undoLevels.length >= undoLevelsMax){
-            undoLevels.shift()
+            undoLevels.shift();
           }
           undoLevels.push(cContext.getImageData( 0, 0, w, h ));
           $("#undo").removeAttr("disabled");
