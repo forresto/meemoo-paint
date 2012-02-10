@@ -9,7 +9,7 @@
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
   <!-- Thanks https://github.com/eligrey/color.js -->
   <script src="color.min.js"></script>
-  <script src="http://meemoo.org/meemoo/meemoo.js"></script>
+  <script src="http://meemoo.org/meemoo/v1/meemoo-min.js"></script>
   
   <style type="text/css">
     html {
@@ -99,6 +99,9 @@
     
     var lineWidth = 2;
     cContext.lineWidth = lineWidth;
+    cContext.lineCap = "round";
+
+    var blur = 0;
     
     var w = c.width;
     var h = c.height;
@@ -138,6 +141,10 @@
       });
       
       cContext.strokeStyle = selectedColor;
+
+      if (0 < blur && blur <= 1) {
+        tool = new tool_blur();
+      }
     }
     
     for (var i = 0; i < baseColors.length; i++) {
@@ -259,7 +266,50 @@
       };
     }
     
-    // Only pencil so far
+    function tool_blur() {
+      var tool = this;
+      this.started = false;
+
+      // This is called when you start holding down the mouse button.
+      // This starts the pencil drawing.
+      this.mousedown = function (e) {
+        tool.started = true;
+      };
+
+      // This function is called every time you move the mouse. Obviously, it only 
+      // draws if the tool.started state is set to true (when you are holding down 
+      // the mouse button).
+      this.mousemove = function (e) {
+        if (tool.started) {
+          // draw shape
+          var half = Math.ceil(lineWidth/2);
+          var radgrad = cContext.createRadialGradient(e.pageX, e.pageY, 0, e.pageX, e.pageY, half);
+          radgrad.addColorStop( 0, Color(Color.parse(selectedColor).hexTriplet(), .1).rgba() );
+          radgrad.addColorStop( blur, Color(Color.parse(selectedColor).hexTriplet(), .05).rgba() );
+          radgrad.addColorStop( 1, Color(Color.parse(selectedColor).hexTriplet(), 0).rgba() );
+          cContext.fillStyle = radgrad;
+          cContext.fillRect(e.pageX-half, e.pageY-half, lineWidth, lineWidth);
+          console.log(radgrad);
+        }
+      };
+
+      // This is called when you release the mouse button.
+      this.mouseup = function (e) {
+        if (tool.started) {
+          // Save undo
+          if(undoLevels.length >= undoLevelsMax){
+            undoLevels.shift();
+          }
+          undoLevels.push(cContext.getImageData( 0, 0, w, h ));
+          $("#undo").removeAttr("disabled");
+          // Finish stroke
+          tool.mousemove(e);
+          tool.started = false;
+        }
+      };
+    }
+
+    // Pencil default
     var tool = new tool_pencil();
     
     // Attach the canvas listeners.
@@ -307,6 +357,27 @@
       // Set paint color to previous
       cContext.strokeStyle = selectedColor;
       cContext.lineWidth = lineWidth;
+      cContext.lineCap = "round";
+    }
+
+    function setLineWidth(w) {
+      lineWidth = w;
+      cContext.lineWidth = lineWidth;
+      cContext.lineCap = "round";
+
+      if (0 < blur && blur <= 1) {
+        tool = new tool_blur();
+      }
+    }
+
+    function setBlur(b) {
+      if (b == 0) {
+        blur = b;
+        tool = new tool_pencil();
+      } else if (0 < b && b <= 1) {
+        blur = b;
+        tool = new tool_blur();
+      }
     }
 
     
@@ -349,6 +420,22 @@
         },
         type: "image",
         description: "tracing image, not part of output"
+      },
+      linewidth: {
+        action: setLineWidth,
+        type: "int",
+        description: "line thickness",
+        min: 1,
+        max: 250,
+        default: lineWidth
+      },
+      blur: {
+        action: setBlur,
+        type: "number",
+        description: "line blur percentage",
+        min: 0,
+        max: 1,
+        default: blur
       },
       undo: {
         action: undo,
