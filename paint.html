@@ -285,7 +285,7 @@
           var half = Math.ceil(lineWidth/2);
           var radgrad = cContext.createRadialGradient(e.pageX, e.pageY, 0, e.pageX, e.pageY, half);
           radgrad.addColorStop( 0, Color(Color.parse(selectedColor).hexTriplet(), .1).rgba() );
-          radgrad.addColorStop( blur, Color(Color.parse(selectedColor).hexTriplet(), .05).rgba() );
+          radgrad.addColorStop( 1-blur, Color(Color.parse(selectedColor).hexTriplet(), .05).rgba() );
           radgrad.addColorStop( 1, Color(Color.parse(selectedColor).hexTriplet(), 0).rgba() );
           cContext.fillStyle = radgrad;
           cContext.fillRect(e.pageX-half, e.pageY-half, lineWidth, lineWidth);
